@@ -3,6 +3,7 @@ const cheerio = require('cheerio');
 const Promise = require('bluebird');
 const { resolve } = require('bluebird');
 const fs = require('fs');
+const { exit } = require('process');
 const baseUrl = 'https://www.cermati.com';
 
 function getDetails(url){
@@ -32,22 +33,31 @@ function getDetails(url){
 
 function getLinks(){
     let links = [];
- return superagent
- .get(baseUrl + '/artikel')
- .then((res) => {
-   const $ = cheerio.load(res.text);
-   $('.article-list-item a').each((i, el) => {
-       const $el = $(el);
-       links.push($el.attr('href'))
-   })
-   return links ;
- });
+    return superagent
+    .get(baseUrl + '/artikel')
+    .then((res) => {
+        const $ = cheerio.load(res.text);
+        $('.article-list-item a').each((i, el) => {
+            const $el = $(el);
+            links.push($el.attr('href'))
+        })
+        return links ;
+        })
+    .catch(err => {
+        return err
+        // if(err.code == 'ENOTFOUND') return 'URL not found. Check baseUrl variable on solution.js'
+        // else 'Unexpected error, owww mann, here we go againn..'
+    });
 
 }
 
 async function main(){
-    console.log('fetching links...')
+    console.log('Opening url...')
     let links = await getLinks();
+    if (links.length === 0){
+        console.log('Failed to scrap article elements. Check getLinks function to fix this problem.')
+        exit()
+    }
     console.log('fetching article details...')
     let details = await Promise.map(links, function(link) {
         return getDetails(link);
